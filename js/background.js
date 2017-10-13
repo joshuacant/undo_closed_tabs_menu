@@ -1,6 +1,7 @@
 const kTST_ID = 'treestyletab@piro.sakura.ne.jp';
 const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com'
 var listSize = null;
+var middleClickEnabled = null;
 
 function initialRegisterToTST() {
   setTimeout(registerToTST, 3000);
@@ -26,14 +27,16 @@ async function loadOptions(options) {
     createOptions();
   }
   else {
-    listSize = options.listSize;
+    listSize = parseInt(options.listSize);
+    middleClickEnabled = options.middleClickEnabled;
     //console.log(options);
   }
 }
 
 async function createOptions() {
   browser.storage.local.set({
-    listSize: "16"
+    listSize: "16",
+    middleClickEnabled: false
   });
   //console.log("creating default options");
   var reloadingOptions = browser.storage.local.get();
@@ -59,7 +62,7 @@ async function updateClosedTabsList(sessions) {
       });
     }
   });
-  //console.log(tabs);
+  //console.log(sessions);
   await browser.runtime.sendMessage(kTST_ID, {
     type: 'fake-contextMenu-remove-all'
   });
@@ -90,9 +93,14 @@ function reOpenTab(tabId) {
   gettingSessions.then(restoreTab.bind(null,tabId));
 }
 
-async function restoreTab(tabId,session) {
+function reOpenLastTab() {
+  var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: 8});
+  gettingSessions.then(restoreTab.bind(null,0));
+}
+
+async function restoreTab(tabId,sessions) {
   var tabs = [];
-  session.forEach(function(session) {
+  sessions.forEach(function(session) {
     if (session.tab) {
       if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
     }
@@ -102,9 +110,7 @@ async function restoreTab(tabId,session) {
       });
     }
   });
-  //var restoringSession = 
   browser.sessions.restore(tabs[tabId].sessionId);
-  //restoringSession.then;
 }
 
 initialRegisterToTST();
@@ -119,6 +125,14 @@ browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
         case 'ready':
           //console.log("re-registering");
           registerToTST();
+          break;
+        case 'tabbar-clicked':
+          if (aMessage.button == 1 && middleClickEnabled) {
+            console.log("middle click in tabbar");
+            reOpenLastTab();
+            return Promise.resolve(true);
+          }
+          return Promise.resolve(false);
           break;
         case 'fake-contextMenu-click':
           //console.log("menu item clicked " + aMessage.info.menuItemId);

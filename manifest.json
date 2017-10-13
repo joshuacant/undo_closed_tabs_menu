@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "TST Closed Tabs Menu",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Shows menu of closed tabs when right clicking TST tabs.",
   "homepage_url": "http://dontpokebadgers.com/",
   "icons": {
