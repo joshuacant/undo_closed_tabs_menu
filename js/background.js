@@ -1,7 +1,7 @@
 const kTST_ID = 'treestyletab@piro.sakura.ne.jp';
 const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com'
-var listSize = null;
-var middleClickEnabled = null;
+var listSize = 16;
+var middleClickEnabled = false;
 
 function initialRegisterToTST() {
   setTimeout(registerToTST, 3000);
@@ -33,24 +33,37 @@ async function loadOptions(options) {
   }
 }
 
+async function reloadOptions(options) {
+  listSize = parseInt(options.listSize.newValue);
+  middleClickEnabled = options.middleClickEnabled.newValue;
+  //console.log(options);
+  buildSessionList();
+}
+
 async function createOptions() {
   browser.storage.local.set({
     listSize: "16",
-    middleClickEnabled: false
+    middleClickEnabled: middleClickEnabled
   });
   //console.log("creating default options");
   var reloadingOptions = browser.storage.local.get();
   reloadingOptions.then(loadOptions);
 }
 
-function tabClosed() {
-  var initalizingOptions = browser.storage.local.get();
-  initalizingOptions.then(loadOptions);
+function buildSessionList() {
+//  var initalizingOptions = browser.storage.local.get();
+//  initalizingOptions.then(loadOptions);
   var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
-  gettingSessions.then(updateClosedTabsList);
+  gettingSessions.then(updateClosedTabsMenu);
 }
 
-async function updateClosedTabsList(sessions) {
+async function emptyClosedTabsMenu() {
+  await browser.runtime.sendMessage(kTST_ID, {
+    type: 'fake-contextMenu-remove-all'
+  });
+}
+
+async function updateClosedTabsMenu(sessions) {
   var tabs = [];
   sessions.forEach(function(session) {
     if (session.tab) {
@@ -63,9 +76,7 @@ async function updateClosedTabsList(sessions) {
     }
   });
   //console.log(sessions);
-  await browser.runtime.sendMessage(kTST_ID, {
-    type: 'fake-contextMenu-remove-all'
-  });
+  emptyClosedTabsMenu();
   var id = 999;
   var type = 'normal';
   var title = 'Undo Closed Tabs';
@@ -114,7 +125,12 @@ async function restoreTab(tabId,sessions) {
 }
 
 initialRegisterToTST();
-browser.sessions.onChanged.addListener(tabClosed);
+emptyClosedTabsMenu();
+buildSessionList();
+var initalizingOptions = browser.storage.local.get();
+initalizingOptions.then(loadOptions);
+browser.storage.onChanged.addListener(reloadOptions);
+browser.sessions.onChanged.addListener(buildSessionList);
 browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
 //  var refreshingOptions = browser.storage.local.get();
 //  refreshingOptions.then(loadOptions);
