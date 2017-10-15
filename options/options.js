@@ -2,7 +2,7 @@ function loadOptions() {
   function setOptions(options) {
     //console.log(options);
     document.querySelector("#listSize").value = options.listSize;
-    document.querySelector("#listSize").checked = options.middleClickEnabled;
+    document.querySelector("#middleClickEnabled").checked = options.middleClickEnabled;
   }
   var getting = browser.storage.local.get();
   getting.then(setOptions, onError);

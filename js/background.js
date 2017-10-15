@@ -42,7 +42,7 @@ async function reloadOptions(options) {
 
 async function createOptions() {
   browser.storage.local.set({
-    listSize: "16",
+    listSize: listSize,
     middleClickEnabled: middleClickEnabled
   });
   //console.log("creating default options");
@@ -126,9 +126,9 @@ async function restoreTab(tabId,sessions) {
 
 initialRegisterToTST();
 emptyClosedTabsMenu();
-buildSessionList();
 var initalizingOptions = browser.storage.local.get();
 initalizingOptions.then(loadOptions);
+buildSessionList();
 browser.storage.onChanged.addListener(reloadOptions);
 browser.sessions.onChanged.addListener(buildSessionList);
 browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
