@@ -61,6 +61,15 @@ async function emptyClosedTabsMenu() {
   await browser.runtime.sendMessage(kTST_ID, {
     type: 'fake-contextMenu-remove-all'
   });
+  var id = 999;
+  var type = 'normal';
+  var title = 'Undo Closed Tabs';
+  var parentId = null;
+  let params = {id, type, title, contexts: ['tab']};
+  await browser.runtime.sendMessage(kTST_ID, {
+    type: 'fake-contextMenu-create',
+    params
+  });
 }
 
 async function updateClosedTabsMenu(sessions) {
@@ -76,21 +85,12 @@ async function updateClosedTabsMenu(sessions) {
     }
   });
   //console.log(sessions);
-  emptyClosedTabsMenu();
-  var id = 999;
-  var type = 'normal';
-  var title = 'Undo Closed Tabs';
-  var parentId = null;
-  let params = {id, type, title, contexts: ['tab']};
-  await browser.runtime.sendMessage(kTST_ID, {
-    type: 'fake-contextMenu-create',
-    params
-  });
+  await emptyClosedTabsMenu();
   for (var iTab = 0; iTab < tabs.length; ++iTab) {
-    id = iTab;
-    type = 'normal';
-    title = tabs[iTab].title || 'No Title';
-    parentId = 999;
+    var id = iTab;
+    var type = 'normal';
+    var title = tabs[iTab].title || 'No Title';
+    var parentId = 999;
     let params = {id, type, title, parentId, contexts: ['tab']};
     await browser.runtime.sendMessage(kTST_ID, {
       type: 'fake-contextMenu-create',
@@ -115,20 +115,18 @@ async function restoreTab(tabId,sessions) {
     if (session.tab) {
       if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
     }
-    if (session.window) {
-      session.window.tabs.forEach(function(windowTab) {
-        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
-      });
-    }
+//    if (session.window) {
+//      session.window.tabs.forEach(function(windowTab) {
+//        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
+//      });
+//    }
   });
   browser.sessions.restore(tabs[tabId].sessionId);
 }
 
 initialRegisterToTST();
-emptyClosedTabsMenu();
 var initalizingOptions = browser.storage.local.get();
 initalizingOptions.then(loadOptions);
-buildSessionList();
 browser.storage.onChanged.addListener(reloadOptions);
 browser.sessions.onChanged.addListener(buildSessionList);
 browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
