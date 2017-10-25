@@ -1,11 +1,12 @@
+"use strict";
 const kTST_ID = 'treestyletab@piro.sakura.ne.jp';
 const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com'
 var listSize = 16;
 var middleClickEnabled = false;
 
-function initialRegisterToTST() {
-  setTimeout(registerToTST, 3000);
-}
+//function initialRegisterToTST() {
+//  setTimeout(registerToTST, 100);
+//}
 
 async function registerToTST() {
   var success = await browser.runtime.sendMessage(kTST_ID, {
@@ -13,12 +14,9 @@ async function registerToTST() {
     name: ext_ID,
     //style: '.tab {color: blue;}'
   })
-//  if (!success) {
-//    console.log(ext_ID+" unable to register.");
-//    }
-//  else {
-//    console.log(ext_ID+" registered sucessfully.");
-//  }
+  if (success) {
+    await buildSessionList();
+  }
 }
 
 async function loadOptions(options) {
@@ -51,8 +49,6 @@ async function createOptions() {
 }
 
 function buildSessionList() {
-//  var initalizingOptions = browser.storage.local.get();
-//  initalizingOptions.then(loadOptions);
   var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
   gettingSessions.then(updateClosedTabsMenu);
 }
@@ -84,7 +80,6 @@ async function updateClosedTabsMenu(sessions) {
       });
     }
   });
-  //console.log(sessions);
   await emptyClosedTabsMenu();
   for (var iTab = 0; iTab < tabs.length; ++iTab) {
     var id = iTab;
@@ -124,14 +119,13 @@ async function restoreTab(tabId,sessions) {
   browser.sessions.restore(tabs[tabId].sessionId);
 }
 
-initialRegisterToTST();
+//initialRegisterToTST();
+registerToTST();
 var initalizingOptions = browser.storage.local.get();
 initalizingOptions.then(loadOptions);
 browser.storage.onChanged.addListener(reloadOptions);
 browser.sessions.onChanged.addListener(buildSessionList);
 browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
-//  var refreshingOptions = browser.storage.local.get();
-//  refreshingOptions.then(loadOptions);
   switch (aSender.id) {
     case kTST_ID:
       //console.log(aMessage.type)
@@ -142,7 +136,7 @@ browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
           break;
         case 'tabbar-clicked':
           if (aMessage.button == 1 && middleClickEnabled) {
-            console.log("middle click in tabbar");
+            //console.log("middle click in tabbar");
             reOpenLastTab();
             return Promise.resolve(true);
           }
