@@ -1,20 +1,18 @@
 "use strict";
 const kTST_ID = 'treestyletab@piro.sakura.ne.jp';
-const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com'
+const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com';
 var listSize = 16;
 var middleClickEnabled = false;
-
-//function initialRegisterToTST() {
-//  setTimeout(registerToTST, 100);
-//}
 
 async function registerToTST() {
   var success = await browser.runtime.sendMessage(kTST_ID, {
     type: 'register-self',
     name: ext_ID,
     //style: '.tab {color: blue;}'
-  })
+  });
   if (success) {
+    //console.log(ext_ID + " successfully registered");
+    clearTimeout(registrationTimer);
     await buildSessionList();
   }
 }
@@ -119,8 +117,7 @@ async function restoreTab(tabId,sessions) {
   browser.sessions.restore(tabs[tabId].sessionId);
 }
 
-//initialRegisterToTST();
-registerToTST();
+var registrationTimer = setInterval(registerToTST, 2000);
 var initalizingOptions = browser.storage.local.get();
 initalizingOptions.then(loadOptions);
 browser.storage.onChanged.addListener(reloadOptions);
