@@ -98,7 +98,7 @@ async function createOptions() {
 }
 
 function buildSessionList() {
-  let gettingSessions = browser.sessions.getRecentlyClosed();
+  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
   gettingSessions.then(updateClosedTabsMenu);
 }
 
@@ -121,6 +121,8 @@ async function updateClosedTabsMenu(sessions) {
   let tabs = [];
   sessions.forEach(function(session) {
     if (session.tab) {
+      // This line below filters out things like about:newtab and basically anything but a webpage
+      // Not sure if it's better with or without it...
       //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
       tabs.push(session.tab);
     }
@@ -152,7 +154,7 @@ function reOpenTab(tabId) {
 }
 
 function reOpenLastTab() {
-  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: 8});
+  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
   gettingSessions.then(restoreTab.bind(null,0));
 }
 
