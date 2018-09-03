@@ -1,20 +1,71 @@
 "use strict";
 const kTST_ID = 'treestyletab@piro.sakura.ne.jp';
-const ext_ID = 'tst-closed_tabs_menu@dontpokebadgers.com';
-var listSize = 16;
-var middleClickEnabled = false;
+let listSize = 25;
+let middleClickEnabled = false;
+let registrationStatus = false;
+
+window.addEventListener('DOMContentLoaded', async () => {
+    const initalizingOptions = await browser.storage.local.get();
+    loadOptions(initalizingOptions);
+    let registrationTimeout = 0;
+    while (registrationStatus === false && registrationTimeout < 10000) {
+        console.log("registering tst-closed_tabs_menu");
+        await timeout(registrationTimeout);
+        await registerToTST();
+        registrationTimeout = registrationTimeout + 1000;
+    }
+    browser.storage.onChanged.addListener(reloadOptions);
+    browser.tabs.onRemoved.addListener(buildSessionList);
+    browser.tabs.onCreated.addListener(buildSessionList);
+    browser.tabs.onDetached.addListener(buildSessionList);
+    browser.runtime.onMessageExternal.addListener(onMessageExternal);
+});
+
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function onMessageExternal(aMessage, aSender) {
+    if (aSender.id === kTST_ID) {
+      //console.log(aMessage.type)
+      switch (aMessage.type) {
+        case 'ready':
+          //console.log("re-registering");
+          registerToTST();
+          break;
+        case 'tabbar-clicked':
+          if (aMessage.button == 1 && middleClickEnabled) {
+            //console.log("middle click in tabbar");
+            reOpenLastTab();
+            return Promise.resolve(true);
+          }
+          return Promise.resolve(false);
+          break;
+        case 'fake-contextMenu-click':
+          //console.log("menu item clicked " + aMessage.info.menuItemId);
+          reOpenTab(aMessage.info.menuItemId);
+          break;
+      }
+  }
+}
 
 async function registerToTST() {
-  var success = await browser.runtime.sendMessage(kTST_ID, {
-    type: 'register-self',
-    name: ext_ID,
-    //style: '.tab {color: blue;}'
-  });
-  if (success) {
-    //console.log(ext_ID + " successfully registered");
-    clearTimeout(registrationTimer);
-    await buildSessionList();
-  }
+    try {
+        const self = await browser.management.getSelf();
+        let success = await browser.runtime.sendMessage(kTST_ID, {
+            type: 'register-self',
+            name: self.id,
+            listeningTypes: ['fake-contextMenu-click', 'tabbar-clicked', 'ready'],
+        });
+        console.log("tst-closed_tabs_menu registration successful");
+        registrationStatus = true;
+        await buildSessionList();
+        return true;
+    }
+    catch (ex) {
+        console.log("tst-closed_tabs_menu registration failed with " + ex);
+        return false;
+    }
 }
 
 async function loadOptions(options) {
@@ -42,12 +93,12 @@ async function createOptions() {
     middleClickEnabled: middleClickEnabled
   });
   //console.log("creating default options");
-  var reloadingOptions = browser.storage.local.get();
+  let reloadingOptions = browser.storage.local.get();
   reloadingOptions.then(loadOptions);
 }
 
 function buildSessionList() {
-  var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
+  let gettingSessions = browser.sessions.getRecentlyClosed();
   gettingSessions.then(updateClosedTabsMenu);
 }
 
@@ -55,10 +106,10 @@ async function emptyClosedTabsMenu() {
   await browser.runtime.sendMessage(kTST_ID, {
     type: 'fake-contextMenu-remove-all'
   });
-  var id = 999;
-  var type = 'normal';
-  var title = 'Undo Closed Tabs';
-  var parentId = null;
+  let id = 999;
+  let type = 'normal';
+  let title = 'Undo Closed Tabs';
+  let parentId = null;
   let params = {id, type, title, contexts: ['tab']};
   await browser.runtime.sendMessage(kTST_ID, {
     type: 'fake-contextMenu-create',
@@ -67,23 +118,26 @@ async function emptyClosedTabsMenu() {
 }
 
 async function updateClosedTabsMenu(sessions) {
-  var tabs = [];
+  let tabs = [];
   sessions.forEach(function(session) {
     if (session.tab) {
-      if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
+      //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
+      tabs.push(session.tab);
     }
-    if (session.window) {
-      session.window.tabs.forEach(function(windowTab) {
-        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
-      });
-    }
+// Enable to include recently closed windows
+// Firefox's own recently closed tabs menu doesn't include items like this, should we?
+//    if (session.window) {
+//      session.window.tabs.forEach(function(windowTab) {
+//        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
+//      });
+//    }
   });
   await emptyClosedTabsMenu();
-  for (var iTab = 0; iTab < tabs.length; ++iTab) {
-    var id = iTab;
-    var type = 'normal';
-    var title = tabs[iTab].title || 'No Title';
-    var parentId = 999;
+  for (let iTab = 0; iTab < tabs.length; ++iTab) {
+    let id = iTab;
+    let type = 'normal';
+    let title = tabs[iTab].title || 'No Title';
+    let parentId = 999;
     let params = {id, type, title, parentId, contexts: ['tab']};
     await browser.runtime.sendMessage(kTST_ID, {
       type: 'fake-contextMenu-create',
@@ -93,21 +147,23 @@ async function updateClosedTabsMenu(sessions) {
 }
 
 function reOpenTab(tabId) {
-  var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
+  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
   gettingSessions.then(restoreTab.bind(null,tabId));
 }
 
 function reOpenLastTab() {
-  var gettingSessions = browser.sessions.getRecentlyClosed({maxResults: 8});
+  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: 8});
   gettingSessions.then(restoreTab.bind(null,0));
 }
 
 async function restoreTab(tabId,sessions) {
-  var tabs = [];
+  let tabs = [];
   sessions.forEach(function(session) {
     if (session.tab) {
-      if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
+      //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
+      tabs.push(session.tab);
     }
+// See earlier note about recently closed windows
 //    if (session.window) {
 //      session.window.tabs.forEach(function(windowTab) {
 //        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
@@ -116,38 +172,3 @@ async function restoreTab(tabId,sessions) {
   });
   browser.sessions.restore(tabs[tabId].sessionId);
 }
-
-var registrationTimer = setInterval(registerToTST, 2000);
-var initalizingOptions = browser.storage.local.get();
-initalizingOptions.then(loadOptions);
-browser.storage.onChanged.addListener(reloadOptions);
-browser.sessions.onChanged.addListener(buildSessionList);
-browser.runtime.onMessageExternal.addListener((aMessage, aSender) => {
-  switch (aSender.id) {
-    case kTST_ID:
-      //console.log(aMessage.type)
-      switch (aMessage.type) {
-        case 'ready':
-          //console.log("re-registering");
-          registerToTST();
-          break;
-        case 'tabbar-clicked':
-          if (aMessage.button == 1 && middleClickEnabled) {
-            //console.log("middle click in tabbar");
-            reOpenLastTab();
-            return Promise.resolve(true);
-          }
-          return Promise.resolve(false);
-          break;
-        case 'fake-contextMenu-click':
-          //console.log("menu item clicked " + aMessage.info.menuItemId);
-          reOpenTab(aMessage.info.menuItemId);
-          break;
-      }
-      break;
-  }
-});
-
-//var success = await browser.runtime.sendMessage(kTST_ID, {
-//  type: 'unregister-self'
-//});
