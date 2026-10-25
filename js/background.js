@@ -4,37 +4,30 @@ let listSize = 25;
 window.addEventListener('DOMContentLoaded', async () => {
     const initalizingOptions = await browser.storage.local.get();
     loadOptions(initalizingOptions);
-    await buildSessionList();
+    buildSessionList();
     browser.storage.onChanged.addListener(reloadOptions);
-    browser.tabs.onRemoved.addListener(buildSessionList);
-    browser.tabs.onCreated.addListener(buildSessionList);
-    browser.tabs.onDetached.addListener(buildSessionList);
+    browser.menus.onShown.addListener(buildSessionList);
     browser.menus.onClicked.addListener(reOpenTab);
 });
 
 
 async function loadOptions(options) {
   if (Object.keys(options).length == 0) {
-    //console.log("no options");
     createOptions();
   }
   else {
     listSize = parseInt(options.listSize);
-    //console.log(options);
   }
 }
 
 async function reloadOptions(options) {
   listSize = parseInt(options.listSize.newValue);
-  //console.log(options);
-  buildSessionList();
 }
 
 async function createOptions() {
   browser.storage.local.set({
     listSize: listSize
   });
-  //console.log("creating default options");
   let reloadingOptions = browser.storage.local.get();
   reloadingOptions.then(loadOptions);
 }
@@ -53,15 +46,16 @@ async function updateClosedTabsMenu(sessions) {
       //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
       tabs.push(session.tab);
     }
-// Enable to include recently closed windows
-// Firefox's own recently closed tabs menu doesn't include items like this, should we?
-//    if (session.window) {
-//      session.window.tabs.forEach(function(windowTab) {
-//        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
-//      });
-//    }
+    // Enable to include recently closed windows
+    // Firefox's own recently closed tabs menu doesn't include items like this, should we?
+    //    if (session.window) {
+    //      session.window.tabs.forEach(function(windowTab) {
+    //        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
+    //      });
+    //    }
   });
   await browser.menus.removeAll();
+  await browser.menus.refresh();
   for (let iTab = 0; iTab < tabs.length; ++iTab) {
     let id = iTab.toString();
     let type = 'normal';
@@ -73,6 +67,7 @@ async function updateClosedTabsMenu(sessions) {
       contexts: ['tab']
     });
   }
+  await browser.menus.refresh();
 }
 
 function reOpenTab(info, tab) {
@@ -87,12 +82,12 @@ async function restoreTab(tabId,sessions) {
       //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
       tabs.push(session.tab);
     }
-// See earlier note about recently closed windows
-//    if (session.window) {
-//      session.window.tabs.forEach(function(windowTab) {
-//        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
-//      });
-//    }
+    // See earlier note about recently closed windows
+    //    if (session.window) {
+    //      session.window.tabs.forEach(function(windowTab) {
+    //        if (windowTab.url.startsWith('http')) { tabs.push(windowTab); }
+    //      });
+    //    }
   });
   browser.sessions.restore(tabs[tabId].sessionId);
 }
