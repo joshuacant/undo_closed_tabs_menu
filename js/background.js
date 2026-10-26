@@ -1,19 +1,18 @@
 "use strict";
+
+async function _init() {
+  const self = await browser.management.getSelf();
+  console.log(self.id + " loading");
+
+  await loadOptions(self);
+  await buildSessionList();
+}
+
 let listSize = 25;
-
-window.addEventListener('DOMContentLoaded', async () => {
-    const initalizingOptions = await browser.storage.local.get();
-    loadOptions(initalizingOptions);
-    buildSessionList();
-    browser.storage.onChanged.addListener(reloadOptions);
-    browser.menus.onShown.addListener(buildSessionList);
-    browser.menus.onClicked.addListener(reOpenTab);
-});
-
-
-async function loadOptions(options) {
+async function loadOptions(self) {
+  let options = await browser.storage.local.get();
   if (Object.keys(options).length == 0) {
-    createOptions();
+    createOptions(self);
   }
   else {
     listSize = parseInt(options.listSize);
@@ -24,22 +23,23 @@ async function reloadOptions(options) {
   listSize = parseInt(options.listSize.newValue);
 }
 
-async function createOptions() {
-  browser.storage.local.set({
+async function createOptions(self) {
+  console.log(self.id + " creating options");
+  await browser.storage.local.set({
     listSize: listSize
   });
   let reloadingOptions = browser.storage.local.get();
   reloadingOptions.then(loadOptions);
 }
 
-function buildSessionList() {
-  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
+async function buildSessionList() {
+  let gettingSessions = browser.sessions.getRecentlyClosed({ maxResults: listSize });
   gettingSessions.then(updateClosedTabsMenu);
 }
 
 async function updateClosedTabsMenu(sessions) {
   let tabs = [];
-  sessions.forEach(function(session) {
+  sessions.forEach(function (session) {
     if (session.tab) {
       // This line below filters out things like about:newtab and basically anything but a webpage
       // Not sure if it's better with or without it...
@@ -71,13 +71,13 @@ async function updateClosedTabsMenu(sessions) {
 }
 
 function reOpenTab(info, tab) {
-  let gettingSessions = browser.sessions.getRecentlyClosed({maxResults: listSize});
-  gettingSessions.then(restoreTab.bind(null,info.menuItemId));
+  let gettingSessions = browser.sessions.getRecentlyClosed({ maxResults: listSize });
+  gettingSessions.then(restoreTab.bind(null, info.menuItemId));
 }
 
-async function restoreTab(tabId,sessions) {
+async function restoreTab(tabId, sessions) {
   let tabs = [];
-  sessions.forEach(function(session) {
+  sessions.forEach(function (session) {
     if (session.tab) {
       //if (session.tab.url.startsWith('http')) { tabs.push(session.tab); }
       tabs.push(session.tab);
@@ -91,3 +91,8 @@ async function restoreTab(tabId,sessions) {
   });
   browser.sessions.restore(tabs[tabId].sessionId);
 }
+
+_init();
+browser.storage.onChanged.addListener(reloadOptions);
+browser.menus.onShown.addListener(buildSessionList);
+browser.menus.onClicked.addListener(reOpenTab);
