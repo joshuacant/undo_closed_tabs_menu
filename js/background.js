@@ -6,6 +6,10 @@ async function _init() {
 
   await loadOptions(self);
   await buildSessionList();
+
+  browser.storage.onChanged.addListener(reloadOptions);
+  browser.menus.onShown.addListener(buildSessionList);
+  browser.menus.onClicked.addListener(reOpenTab);
 }
 
 let listSize = 25;
@@ -93,6 +97,3 @@ async function restoreTab(tabId, sessions) {
 }
 
 _init();
-browser.storage.onChanged.addListener(reloadOptions);
-browser.menus.onShown.addListener(buildSessionList);
-browser.menus.onClicked.addListener(reOpenTab);
