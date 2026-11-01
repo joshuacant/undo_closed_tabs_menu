@@ -1,10 +1,10 @@
 "use strict";
 
 async function _init() {
-  const self = await browser.management.getSelf();
-  console.log(self.id + " loading");
+  const gettingSelf = await browser.management.getSelf();
+  console.log(gettingSelf.id + " loading");
 
-  await loadOptions(self);
+  await loadOptions(gettingSelf);
   await buildSessionList();
 
   browser.storage.onChanged.addListener(reloadOptions);
@@ -13,10 +13,10 @@ async function _init() {
 }
 
 let listSize = 25;
-async function loadOptions(self) {
+async function loadOptions(gettingSelf) {
   let options = await browser.storage.local.get();
   if (Object.keys(options).length == 0) {
-    await createOptions(self);
+    await createOptions(gettingSelf);
   }
   else {
     listSize = parseInt(options.listSize);
@@ -27,8 +27,8 @@ async function reloadOptions(options) {
   listSize = parseInt(options.listSize.newValue);
 }
 
-async function createOptions(self) {
-  console.log(self.id + " creating options");
+async function createOptions(gettingSelf) {
+  console.log(gettingSelf.id + " creating options");
   await browser.storage.local.set({
     listSize: listSize
   });
