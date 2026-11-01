@@ -16,7 +16,7 @@ let listSize = 25;
 async function loadOptions(self) {
   let options = await browser.storage.local.get();
   if (Object.keys(options).length == 0) {
-    createOptions(self);
+    await createOptions(self);
   }
   else {
     listSize = parseInt(options.listSize);
