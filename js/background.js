@@ -7,6 +7,7 @@ async function _init() {
   await loadOptions(gettingSelf);
   await buildSessionList();
 
+  self.setInterval(() => browser.runtime.getPlatformInfo(), 2e4);
   browser.storage.onChanged.addListener(reloadOptions);
   browser.menus.onShown.addListener(buildSessionList);
   browser.menus.onClicked.addListener(reOpenTab);
