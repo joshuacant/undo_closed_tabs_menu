@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Undo Closed Tabs Menu",
-  "version": "2.2",
+  "version": "2.3",
   "description": "Shows menu of closed tabs when right clicking on tabs.",
   "homepage_url": "https://github.com/joshuacant/undo_closed_tabs_menu",
   "icons": {
